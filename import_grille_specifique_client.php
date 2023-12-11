@@ -37,6 +37,13 @@ function import_grille_specifique_client ( &$action ) {
         $oGrilleSpecifiqueClient = new_Doc("", $idGrilleTarifaireClient);
         // Donnée brut de DB
         $aGrilleSpClient = $oGrilleSpecifiqueClient->getArrayRawValues("gts_t_containt");
+        $aChampSousTarif = array_keys($aGrilleSpClient[0]);
+        $oFamille = new_Doc("", "GRILLETARIFAIRE");
+        foreach($aChampSousTarif as $sChampSousTarif){
+            $oAttribut = $oFamille->getAttribute($sChampSousTarif);
+            $aEntete[] = $oAttribut->labelText;
+            // echo $oAttribut->labelText." (".$oAttribut->visibility.")<br/>";
+        }
 
         // Récupérer le chemin du fichier
         $sCheminFichier = $sFichierImport;//$sFichierImport FDL/tmp/test.csv
@@ -58,6 +65,7 @@ function import_grille_specifique_client ( &$action ) {
         array_shift($aDonneeCsv);
         // Supprimer la dernière ligne vide 
         array_pop($aDonneeCsv);
+
         // Afficher le tableau résultant
         $html = "<table class='table'>
                     <thead>
@@ -86,6 +94,7 @@ function import_grille_specifique_client ( &$action ) {
                 $html ."</tr>";
             }
         $html .= "</tbody></table>";
+
         // Création d'un nouveau tableau associatif à partir de $aDonneeCsv
         // Tableau contenant les nouvelles clés
         $aNouvelleCle = ['reference',
@@ -104,6 +113,19 @@ function import_grille_specifique_client ( &$action ) {
         
         // Tableau pour stocker le résultat pour changer les clés de $aDonneeCsv
         $aNouvelleDonneeCsv = remplacerCles($aDonneeCsv, $aNouvelleCle);
+
+        // Tableau pour stocker le résultat pour changer les clés de $aEnteteCsv
+        $aResultatEntete = remplacerClees($aEnteteCsv, $aNouvelleCle);
+
+        // les libellés csv
+        $aColonne = [];
+        foreach($aResultatEntete as $sCleEntete=> $sValeurEntete)
+        {
+            $aCreeColonne = creeColonne($sCleEntete, $sValeurEntete);
+            array_push($aColonne, $aCreeColonne);
+        }
+
+        // $aNouvelleDonneeCsv contient maintenant les tableaux associatifs avec les clés remplacées
 
         // Tableau d'origine $aGrilleSpClient DB
         // Tableau modifié $aNouvelleDonneeCsv
@@ -170,10 +192,24 @@ function import_grille_specifique_client ( &$action ) {
             }
         }
         // Traitement de tableau BDD en plus vs CSV
+        array_shift($aEntete);
+        // Tableau contenant les nouvelles clés
         // Supprimer le premier élément : 'gts_aridlist'
         for($i = 0; $i < count($aEnplusBase); $i++) {
             array_shift($aEnplusBase[$i]);
         }
+        array_shift($aChampSousTarif);
+        // Tableau pour stocker le résultat pour remplacer les clés de $aEntete même taille
+        $aColonneBasePlus = remplacerClees($aEntete, $aChampSousTarif);
+        // Création des libellés de $aColonneBasePlus
+        $aLibelleBasePlus = [];
+        foreach($aColonneBasePlus as $sCleLibelle => $sValeurLibelle) {
+            $aCreeColonne = creeColonne($sCleLibelle, $sValeurLibelle);
+            array_push($aLibelleBasePlus, $aCreeColonne);
+        }            
+        // Rajouter une colonne dans $aLibelleBasePlus
+        // $aPlus =['field' => 'choice', 'title' => 'Choice'];
+        array_push($aLibelleBasePlus, creeColonne('choice', 'Supprimer'));
 
         // Détéction de doublon dans une colonne
         $colonneAAnalyser = 'gts_refsoustarifs';
@@ -186,8 +222,11 @@ function import_grille_specifique_client ( &$action ) {
 
     
         // Maintenant, $aNouvelleDonneeCsv contient les éléments du tableau de référence qui existent également dans le tableau à comparer
+        // $action->lay->Set("TEST_HTML", $html);
         $action->lay->Set("NOUVELLE_DONNEE_CSV", json_encode($aNouvelleDonneeCsv));
+        // $action->lay->Set("COLONNE_CSV", json_encode($aColonne));
         $action->lay->Set("EN_PLUS_BASE", json_encode($aEnplusBase));
+        // $action->lay->Set("COLONNE_BASE", json_encode($aLibelleBasePlus));
     }
 
 }
@@ -239,6 +278,7 @@ function creeColonne($name, $label){
 function detecterDoublonDansColonne($tableau, $colonne) {
     $valeurs = [];
     foreach ($tableau as $ligne) {
+        // var_dump($ligne);
         // Assurez-vous que la colonne (clé) spécifiée existe dans la ligne
         if (array_key_exists($colonne, $ligne)) {
             $valeur = $ligne[$colonne];
