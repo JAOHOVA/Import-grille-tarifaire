@@ -1,0 +1,217 @@
+<link rel="stylesheet" href="https://kendo.cdn.telerik.com/themes/6.7.0/default/default-main.css"/>
+<script src="https://kendo.cdn.telerik.com/2023.2.829/js/jquery.min.js"></script>
+<script src="https://kendo.cdn.telerik.com/2023.2.829/js/kendo.all.min.js"></script>
+
+<div style="padding-top: 14px" id="upload">[UPLOAD]</div>
+
+<div id="importGrille">
+    <div id="grid"></div>
+    <div id="gridBdPlus"></div>
+    <div class="validerBouton" id="boutonValider">
+      [IF validButton]
+        <button id="validerCheckbox">Valider</button>
+      [ENDIF validButton]
+    </div>
+    <script>
+      $(document).ready(function() {
+        var myDataCsv = [NOUVELLE_DONNEE_CSV];
+        $("#grid").kendoGrid({
+          dataSource: {
+            data: myDataCsv,
+            schema: {
+              model: {
+                fields: {
+                  choix: { type: "boolean" }
+                }
+              }
+            },
+            pageSize: 10
+          },
+          height: 600,
+          filterable: true,
+          editable: false,
+          pageable: true,
+          columns: [
+            { field: "reference", title: "Référence"},
+            { field: "choix",
+              title: "Choix",
+              template: '<input type="checkbox" id = "modifier" #= choix ? \'checked="checked"\' : "" # class="chkbx"/>'
+            },
+            { field: "etat", title: "Etat", width: 175,
+                template:function(dataItem) {
+                    return '<span class="badge">' + dataItem.etat + '</span>';
+                } 
+            },
+            { field: "designation", title: "Désignation" },
+            { field: "reference_si_sous_tarif", title: "Référence, si sous tarif" },
+            { field: "intitulé_si_sous_tarif", title: "Intitulé, si sous tarif" },
+            { field: "duree", title: "Durée" },
+            { field: "modalite", title: "Modalité" },
+            { field: "categorie", title: "Catégorie" },
+            { field: "nombre_de_categories", title: "Nombre de catégories" },
+            { field: "tarif_HT_remise", title: "Tarif HT remisé" },
+            { field: "%_remise", title: "% remisé" }
+          ]
+        });
+
+        // Récupérer les éléments contenant les badges
+        let badges = $("#grid").find(".badge");
+        // Parcourir tous les badges pour vérifier et modifier les styles en fonction du contenu
+        badges.each(function() {
+            let badgeText = $(this).text(); // Récupérer le texte du badge
+            if (badgeText.includes("Augmenté")) {
+                $(this).css({
+                    "display": "inline-block",
+                    "background-color": "blue",
+                    "color": "white",
+                    "padding": "4px 8px",
+                    "text-align": "center",
+                    "border-radius": "5px"
+                });
+            } else if (badgeText.includes("Baissée")) {
+                $(this).css({
+                    "display": "inline-block",
+                    "background-color": "red",
+                    "color": "white",
+                    "padding": "4px 8px",
+                    "text-align": "center",
+                    "border-radius": "5px"
+                });
+            }
+        });
+
+        // Pour le tableau de BD  
+        var myDbPlus = [EN_PLUS_BASE];
+        $("#gridBdPlus").kendoGrid({
+          dataSource: {
+            data: myDbPlus,
+            schema: {
+              model: {
+                fields: {
+                  choice: { type: "boolean" }
+                }
+              }
+            },
+            pageSize: 10
+          },
+          height: 300,
+          filterable: true,
+          editable: false,
+          pageable: true,
+          columns: [
+            { field: "gts_aref", title: "Réf"},
+            { field: "gts_alabel", title: "Désignation"},
+            { field: "gts_refsoustarifs", title: "Réf si sous tarifs" },
+            { field: "gts_soustarifs", title: "Intitulé si sous tarifs" },
+            { field: "gts_duree", title: "Duree" },
+            { field: "gts_arhtlist", title: "Tarif HT remisé" },
+            { field: "gts_pourcentremise", title: "Ou % remisé" },
+            { field: "choice",
+              title: "Supprimer", 
+              template: '<input type="checkbox" id="supprimer" class="chkSupprimer"/>'
+            }
+          ]
+        });
+        
+        // Pour cacher le tableau de données en plus dans la base s'il est vide
+        // Récupérer l'élément de tableau Kendo UI
+        let grid = $("#gridBdPlus").data("kendoGrid");
+        // Vérifier si le tableau est vide
+        if (grid.dataSource.data().length === 0) {
+          // Le tableau est vide, masquer le tableau
+          $("#gridBdPlus").hide(); // Cacher le tableau
+        } else {
+          // Le tableau n'est pas vide, afficher le tableau
+          $("#gridBdPlus").show(); // Afficher le tableau
+        }
+
+        // Événement pour vérifier l'état des cases à cocher des deux tableaux
+        $("#validerCheckbox").on("click", function() {
+          var aChoix = [];
+          var aSupprimer = [];
+          $(".chkbx").each(function() {
+            var isChecked = $(this).is(":checked");
+            var dataItem = $("#grid").data("kendoGrid").dataItem($(this).closest("tr"));
+            //console.log(dataItem.reference_si_sous_tarif);
+            if(isChecked) {
+              if(dataItem.etat === "Ligne ajoutée")
+              {
+                aChoix.push(
+                  "On verra ça plut tard" 
+                );
+              } else
+              {
+                aChoix.push(
+                  dataItem.tarif_HT_remise + "@" +
+                  dataItem.reference_si_sous_tarif
+                );
+              }
+            }
+              //aChoix.push($(this).is(":checked") ? "cochée" : "non cochée");
+          });
+          $(".chkSupprimer").each(function() {
+            var isChecked = $(this).is(":checked");
+            var dataItem = $("#gridBdPlus").data("kendoGrid").dataItem($(this).closest("tr"));
+            //console.log(dataItem);
+            if(isChecked) {
+              aSupprimer.push(
+                dataItem.gts_arhtlist + "@" +
+                dataItem.gts_refsoustarifs
+              );
+            }
+            //aSupprimer.push($(this).is(":checked") ? "cochée" : "non cochée");
+          });
+
+          alert("État des cases à cocher du aModifier : \n" + aChoix.join("\n") + "\n\nÉtat des cases à cocher du aDelete : \n" + aSupprimer.join("\n"));
+
+          // Traitement de données
+          let idGrilleTarifaireClient = $("input#idGrilleTarifaireClient").val();
+          //console.log(aChoix);
+          // Envoi des données pour modification via AJAX
+          $.ajax({
+            url : "http://localhost/nicolio/api/v1/vendor/nevea/importGrilleTarifaireClient/"+idGrilleTarifaireClient,
+            type : "GET",
+            dataType : "json",
+            data: {"idGrilleTarifaireClient" : idGrilleTarifaireClient,
+            aModifier : aChoix,
+            aSupprimer : aSupprimer
+            }, // Envoyer les nouvelles valeurs à mettre à jour
+            success : function(response){
+            // Mettre à jour le tableau après les modifications
+            //myDbPlus.read(idGrilleTarifaireClient);
+            $('#importGrille').html("Les données sont bien envoyées");
+            // Actualiser la page après le succès de la requête AJAX
+            window.location.reload();
+            },
+            error : function(){
+            },
+          });
+        });
+        $("#validerCheckbox").kendoButton({
+          click: function(e) {
+              // Empêcher le comportement par défaut du bouton
+              e.preventDefault();
+              // Recharger la page après 100 millisecondes
+              setTimeout(function() {
+                  location.reload();
+              }, 100); // Temps en millisecondes avant le rechargement de la page
+          },
+          themeColor: "info",
+          rounded: "medium",
+          size: "medium",
+          fillMode: "solid"
+        });
+
+      });
+    </script>
+
+    <style type="text/css">
+      .validerBouton {
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+    
+</div>
