@@ -1,0 +1,5 @@
+//;fromid;title;special id;class;name;;;;;;;;;;
+BEGIN;;Grille tarifaire spécifique;;;GRILLETARIFAIRE;;;;;;;;;;
+//;idattr;idframe;label;T;A;type;ord;vis;need;link;phpfile;phpfunc;extralien;phpconstraint;options
+ATTR;GTS_IMPORT_GRILLE_SPECIFIQUE_CLIENT;;Importer grille client;N;N;menu;20;W;;[_blank]%S%app=AFFAIRE&action=IMPORT_GRILLE_SPECIFIQUE_CLIENT&id=%I%;;;;;
+END;0;;;;;;;;;;;;;;
